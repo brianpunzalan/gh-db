@@ -13,6 +13,7 @@
 ### Session 2026-05-20
 
 - Q: How should JSON records be addressed within the repository (path/identity rules)? → A: Flat single-segment keys only (no slashes), no extension required.
+- Q: What should happen on commit when the remote branch tip has advanced beyond the tip seen at staging time (concurrent external commit)? → A: Caller-supplied policy per instance or per commit — `fail` (default), `retry` (refetch tip and replay), or `rebase` (replay only when no staged key overlaps with externally-changed records, otherwise surface conflict).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -103,7 +104,7 @@ A developer wants the application to react to external changes to the repository
 
 ### Edge Cases
 
-- **Concurrent external commit during staging**: Another actor pushes a commit to the same branch while the developer has staged changes locally. On commit, the operation must either cleanly fast-forward, surface a conflict the developer can resolve or abort, or be configurable between these — but it MUST NOT silently overwrite the external commit.
+- **Concurrent external commit during staging**: Another actor pushes a commit to the same branch while the developer has staged changes locally. Behavior on commit follows the caller's selected conflict policy (`fail` / `retry` / `rebase` — see FR-022a). gh-db MUST NOT silently overwrite the external commit under any policy.
 - **Stage a create at a key that already exists** (or update at a key that does not exist): gh-db must distinguish create-versus-update semantics clearly and reject mismatches with an explicit error rather than silently doing the other operation.
 - **Stage a delete of a key that has a pending create in the same staging batch**: The two operations cancel and the key is left untouched; the resulting commit (if anything else is staged) contains no entry for that key.
 - **Invalid key supplied** (empty string, contains `/` or `\`, contains path-traversal segments): the operation is rejected before entering the staging area, with a clear validation error distinct from "not found".
@@ -159,7 +160,12 @@ A developer wants the application to react to external changes to the repository
 
 #### Concurrency & External Changes
 
-- **FR-022**: When committing, the package MUST detect that the remote branch tip has advanced beyond the tip seen when staging began, and MUST surface this as a recognisable conflict rather than silently overwriting external changes.
+- **FR-022**: When committing, the package MUST detect that the remote branch tip has advanced beyond the tip seen when staging began, and MUST never silently overwrite external changes.
+- **FR-022a**: The package MUST accept a caller-supplied conflict policy, settable on the instance and overridable per-commit, with three values:
+  - **`fail`** (default): surface a typed conflict error and leave the staging area intact for the caller to refresh and retry explicitly.
+  - **`retry`**: refetch the latest tip and replay the staged batch on top, applying the same staged operations as if the new tip had been the staging baseline; if the conflict persists across a bounded number of attempts (caller-configurable, with a built-in upper limit), surface a typed conflict error.
+  - **`rebase`**: refetch the latest tip; if no staged key intersects the set of keys changed by external commits since the staging baseline, replay the staged batch on top (same behavior as `retry`); if any staged key overlaps with an externally-changed key, surface a typed conflict error identifying the overlapping keys, with the staging area left intact.
+- **FR-022b**: In all conflict outcomes (any policy), if the commit ultimately fails, the staging area MUST remain intact (per FR-013) so the caller can inspect, reset, or retry.
 
 #### Webhooks
 

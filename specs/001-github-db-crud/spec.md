@@ -15,6 +15,7 @@
 - Q: How should JSON records be addressed within the repository (path/identity rules)? → A: Flat single-segment keys only (no slashes), no extension required.
 - Q: What should happen on commit when the remote branch tip has advanced beyond the tip seen at staging time (concurrent external commit)? → A: Caller-supplied policy per instance or per commit — `fail` (default), `retry` (refetch tip and replay), or `rebase` (replay only when no staged key overlaps with externally-changed records, otherwise surface conflict).
 - Q: Which GitHub deployments must gh-db support? → A: github.com by default, plus a caller-supplied API base URL to target GitHub Enterprise Server / Enterprise Cloud with a custom domain.
+- Q: How should gh-db handle transient GitHub errors (primary/secondary rate limits, 5xx)? → A: Built-in bounded exponential backoff for transient errors with configurable max-attempts and base-delay; non-transient errors (auth, permission, validation, conflict, not-found) surface immediately and are never retried.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -112,7 +113,7 @@ A developer wants the application to react to external changes to the repository
 - **Invalid JSON content**: Attempting to stage non-JSON-serializable content (functions, circular references) is rejected before staging completes.
 - **Very large records**: A single record approaching or exceeding the repository's per-file size limit must surface a clear, actionable error rather than a generic API failure.
 - **Many records in one commit**: A single commit batching hundreds of staged changes must complete or fail atomically — partial commits (some files written, others not) are not acceptable.
-- **Rate limiting**: GitHub API rate limits must surface as a recognisable error with information about when retry is permitted.
+- **Rate limiting**: Primary and secondary GitHub rate-limit responses are classified as transient and are retried automatically with exponential backoff (honoring any `Retry-After` / rate-limit-reset hint from GitHub) up to the caller's configured attempt budget. If the budget is exhausted, a typed retry-exhaustion error surfaces with the underlying category and (where available) the reset hint.
 - **Authentication expiry**: A token that expires mid-session yields a clear authentication error on the next operation rather than a confusing generic failure.
 - **Rollback when current tip is a merge commit**: Behaviour follows the same "move tip to immediate prior commit" rule; the developer is responsible for understanding the resulting state.
 - **Webhook callback URL becomes unreachable**: gh-db's responsibility ends at registering the webhook; delivery failures are visible via GitHub's delivery records but gh-db does not retry on the developer's behalf.
@@ -175,9 +176,13 @@ A developer wants the application to react to external changes to the repository
 - **FR-024**: The package MUST allow the caller to list webhooks currently registered on the repository.
 - **FR-025**: The package MUST allow the caller to unsubscribe (remove) a previously registered webhook by its identifier.
 
-#### Errors & Observability
+#### Errors, Retries & Observability
 
-- **FR-026**: All failures from GitHub (authentication, permission, rate limit, not found, conflict) MUST be surfaced to the caller as distinct, programmatically distinguishable error categories rather than as a single generic error.
+- **FR-026**: All failures from GitHub (authentication, permission, rate limit, not found, conflict, validation) MUST be surfaced to the caller as distinct, programmatically distinguishable error categories rather than as a single generic error.
+- **FR-027**: The package MUST classify GitHub failures into **transient** (primary rate limit `429`, secondary rate limit, and 5xx server errors) and **non-transient** (authentication, permission, validation, not found, conflict) classes for retry purposes.
+- **FR-028**: For transient errors, the package MUST automatically retry the failing request using exponential backoff up to a bounded number of attempts. The maximum number of attempts and the base delay MUST be caller-configurable at initialization, and the package MUST enforce sensible built-in defaults and an upper limit so a misconfigured retry budget cannot block indefinitely. When a primary rate-limit response includes a `Retry-After` (or equivalent rate-limit-reset) hint from GitHub, the package MUST honor that hint instead of the computed backoff delay for that attempt.
+- **FR-029**: For non-transient errors, the package MUST NOT retry; the error MUST surface to the caller immediately with its category preserved.
+- **FR-030**: When retries for a transient error are exhausted, the package MUST surface a typed error indicating retry exhaustion, including the underlying transient category (rate limit vs 5xx), the number of attempts made, and (where available) GitHub's rate-limit-reset hint.
 
 ### Key Entities *(include if feature involves data)*
 

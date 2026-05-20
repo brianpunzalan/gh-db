@@ -14,6 +14,7 @@
 
 - Q: How should JSON records be addressed within the repository (path/identity rules)? → A: Flat single-segment keys only (no slashes), no extension required.
 - Q: What should happen on commit when the remote branch tip has advanced beyond the tip seen at staging time (concurrent external commit)? → A: Caller-supplied policy per instance or per commit — `fail` (default), `retry` (refetch tip and replay), or `rebase` (replay only when no staged key overlaps with externally-changed records, otherwise surface conflict).
+- Q: Which GitHub deployments must gh-db support? → A: github.com by default, plus a caller-supplied API base URL to target GitHub Enterprise Server / Enterprise Cloud with a custom domain.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -124,6 +125,7 @@ A developer wants the application to react to external changes to the repository
 
 - **FR-001**: The package MUST accept credentials (a GitHub access token) and a target repository identifier (owner + repository name) at initialization, and use them for all subsequent operations on that instance.
 - **FR-002**: The package MUST allow the caller to specify which branch within the repository serves as the working branch for reads, writes, commits, and rollback; if unspecified, it MUST default to the repository's default branch.
+- **FR-002a**: The package MUST allow the caller to optionally supply a GitHub API base URL at initialization to target GitHub Enterprise Server or GitHub Enterprise Cloud with a custom domain. When omitted, the package MUST default to the public github.com API. All subsequent GitHub interactions on that instance (CRUD, commit, rollback, repository creation, webhook management) MUST be routed against the configured base URL.
 
 #### Repository Provisioning
 
@@ -201,6 +203,7 @@ A developer wants the application to react to external changes to the repository
 
 - **Single-writer mental model**: gh-db is designed for an application that primarily owns its repository as a datastore. Multi-writer scenarios are supported via conflict detection on commit and webhooks for change notification, but full collaborative merge resolution is the caller's responsibility.
 - **Authentication via personal access token (or equivalent)**: The caller supplies a GitHub token with the scopes appropriate for the operations they intend to use (`repo` for CRUD/commit/rollback, repository administration for repository creation and webhook management). gh-db does not implement OAuth flows itself.
+- **GitHub deployment scope**: gh-db targets github.com by default. Callers operating against GitHub Enterprise Server or GitHub Enterprise Cloud with a custom domain may supply the API base URL at initialization. gh-db relies only on GitHub API capabilities common to both deployment types (repository contents, commits, branches/refs, webhooks); features exclusive to one deployment are out of scope for v1.
 - **JSON-only payloads**: Records are JSON values. Binary blobs and non-JSON text formats are out of scope for v1.
 - **In-memory staging, per instance**: The staging area lives in the gh-db instance in the host process. It does not persist across process restarts; restarting the application discards uncommitted staged changes.
 - **Rollback granularity is one commit at a time**: A single rollback call moves the tip back by exactly one commit. Multi-step rollback is achieved by repeated calls.

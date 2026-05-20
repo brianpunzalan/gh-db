@@ -40,7 +40,14 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+Verify the following constitution gates for this feature:
+
+- [ ] **I. Unit Testing**: Feature design includes unit test plan for all new/changed behavior.
+- [ ] **II. Quality Gates**: CI pipeline enforces unit tests, lint (ESLint), and formatting (Prettier).
+- [ ] **III. JSDoc Documentation**: All new exported functions, classes, and modules will have JSDoc.
+- [ ] **IV. Code Intent Comments**: Design accounts for intent comments on all logical code blocks.
+- [ ] **V. Semantic Versioning & Changelog**: `package.json` version bump and `CHANGELOG.md` entry
+  are included in the task plan for this feature's merge to main.
 
 ## Project Structure
 

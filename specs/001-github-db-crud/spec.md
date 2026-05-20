@@ -8,6 +8,12 @@
 
 **Input**: User description: "gh-db is a typescript npm package that allows your client application to interface with Github as a backend data store / database. Github has repositories and repositories can store files that can be committed. I want to use these functions to store JSON data as persistent data. gh-db should be able to do CRUD (create, retrieve, update, delete) files. All CRUD changes should be staged and can only be committed once commit trigger. Can also rollback by checking out to previous commit. basically, can create repository; can CRUD files within repository; can stage changes; stage changes can be committed or reset; can rollback which is just checking out to previous commit (pruning the current commit node and checks out to previous commit node); can subscribe to webhooks for a repository"
 
+## Clarifications
+
+### Session 2026-05-20
+
+- Q: How should JSON records be addressed within the repository (path/identity rules)? → A: Flat single-segment keys only (no slashes), no extension required.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Create, Stage, Commit JSON Records (Priority: P1)
@@ -98,8 +104,9 @@ A developer wants the application to react to external changes to the repository
 ### Edge Cases
 
 - **Concurrent external commit during staging**: Another actor pushes a commit to the same branch while the developer has staged changes locally. On commit, the operation must either cleanly fast-forward, surface a conflict the developer can resolve or abort, or be configurable between these — but it MUST NOT silently overwrite the external commit.
-- **Stage a create at a path that already exists** (or update at a path that does not exist): gh-db must distinguish create-versus-update semantics clearly and reject mismatches with an explicit error rather than silently doing the other operation.
-- **Stage a delete of a path that has a pending create in the same staging batch**: The two operations cancel and the path is left untouched; the resulting commit (if anything else is staged) contains no entry for that path.
+- **Stage a create at a key that already exists** (or update at a key that does not exist): gh-db must distinguish create-versus-update semantics clearly and reject mismatches with an explicit error rather than silently doing the other operation.
+- **Stage a delete of a key that has a pending create in the same staging batch**: The two operations cancel and the key is left untouched; the resulting commit (if anything else is staged) contains no entry for that key.
+- **Invalid key supplied** (empty string, contains `/` or `\`, contains path-traversal segments): the operation is rejected before entering the staging area, with a clear validation error distinct from "not found".
 - **Invalid JSON content**: Attempting to stage non-JSON-serializable content (functions, circular references) is rejected before staging completes.
 - **Very large records**: A single record approaching or exceeding the repository's per-file size limit must surface a clear, actionable error rather than a generic API failure.
 - **Many records in one commit**: A single commit batching hundreds of staged changes must complete or fail atomically — partial commits (some files written, others not) are not acceptable.
@@ -124,10 +131,12 @@ A developer wants the application to react to external changes to the repository
 
 #### CRUD on JSON Records
 
-- **FR-005**: The package MUST allow the caller to create a new JSON record at a specified path within the repository, accepting any JSON-serializable value as content.
-- **FR-006**: The package MUST allow the caller to retrieve the JSON content of a record at a specified path, returning the parsed JSON value, and MUST distinguish "not found" from other failure modes.
-- **FR-007**: The package MUST allow the caller to update an existing JSON record at a specified path with new JSON content.
-- **FR-008**: The package MUST allow the caller to delete a record at a specified path.
+- **FR-005**: The package MUST allow the caller to create a new JSON record under a specified **key** within the repository, accepting any JSON-serializable value as content. A key is a single flat identifier (no slashes, no path segments) — records are stored at the top level of the repository's working branch, with no nested directories.
+- **FR-005a**: The package MUST validate keys before any operation enters the staging area: a key MUST be a non-empty string that contains no slash (`/`) or backslash (`\`) characters and no path-traversal segments. Keys that fail validation MUST be rejected with a clear error distinct from "not found" or content-serialization errors.
+- **FR-005b**: The package MUST NOT require the caller to supply a file extension on the key. The on-repository file name used to persist a record is an internal detail of gh-db; callers address records solely by their key.
+- **FR-006**: The package MUST allow the caller to retrieve the JSON content of a record by key, returning the parsed JSON value, and MUST distinguish "not found" from other failure modes.
+- **FR-007**: The package MUST allow the caller to update an existing JSON record by key with new JSON content.
+- **FR-008**: The package MUST allow the caller to delete a record by key.
 - **FR-009**: The package MUST reject create/update operations whose content cannot be serialized as JSON, with a clear error, before that operation enters the staging area.
 
 #### Staging, Commit, and Reset
@@ -165,7 +174,7 @@ A developer wants the application to react to external changes to the repository
 ### Key Entities *(include if feature involves data)*
 
 - **Repository Handle**: The configured target of an instance — identifies the GitHub owner, repository name, and the working branch. The unit on which all CRUD, commit, rollback, and webhook operations are performed.
-- **JSON Record**: A single file stored in the repository whose content is a JSON-serializable value. Identified by its path within the repository. The atomic unit of read and write.
+- **JSON Record**: A single file stored at the top level of the repository's working branch whose content is a JSON-serializable value. Identified by a flat **key** (a single string with no slashes and no path segments). The atomic unit of read and write.
 - **Staging Area**: An in-memory, per-instance set of pending create/update/delete operations against records, awaiting a commit or a reset. Not visible to other clients of the repository.
 - **Commit**: A single durable revision of the repository's state, produced by applying all staged operations together with a message. The unit of rollback.
 - **Webhook Subscription**: A registration on the repository associating a callback URL with one or more event types; identified by an identifier returned by GitHub at registration time.

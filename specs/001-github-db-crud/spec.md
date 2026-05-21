@@ -16,6 +16,7 @@
 - Q: What should happen on commit when the remote branch tip has advanced beyond the tip seen at staging time (concurrent external commit)? → A: Caller-supplied policy per instance or per commit — `fail` (default), `retry` (refetch tip and replay), or `rebase` (replay only when no staged key overlaps with externally-changed records, otherwise surface conflict).
 - Q: Which GitHub deployments must gh-db support? → A: github.com by default, plus a caller-supplied API base URL to target GitHub Enterprise Server / Enterprise Cloud with a custom domain.
 - Q: How should gh-db handle transient GitHub errors (primary/secondary rate limits, 5xx)? → A: Built-in bounded exponential backoff for transient errors with configurable max-attempts and base-delay; non-transient errors (auth, permission, validation, conflict, not-found) surface immediately and are never retried.
+- Q: How should reads resolve the "latest committed state" when other actors may have advanced the branch tip between operations on this instance? → A: Caller-supplied read-consistency policy on the instance — `fresh` (default; every retrieve refetches the remote tip) or `cached` (use the last-observed tip and only refresh on commit, rollback, or explicit refresh).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -30,7 +31,7 @@ A developer wires gh-db into their application to persist application state (e.g
 **Acceptance Scenarios**:
 
 1. **Given** a configured gh-db instance pointing at an empty repository, **When** the developer creates two JSON records and calls commit, **Then** exactly one new commit appears on the target branch containing both files with the exact JSON contents provided.
-2. **Given** three staged create operations, **When** the developer inspects the pending staged changes before committing, **Then** all three operations are listed with their target paths and operation type.
+2. **Given** three staged create operations, **When** the developer inspects the pending staged changes before committing, **Then** all three operations are listed with their target keys and operation type.
 3. **Given** staged changes exist, **When** the developer calls commit without providing a message, **Then** the operation is rejected with a clear error and the staged changes remain intact.
 4. **Given** a commit has just succeeded, **When** the developer inspects staged changes, **Then** the staging area is empty.
 
@@ -38,19 +39,19 @@ A developer wires gh-db into their application to persist application state (e.g
 
 ### User Story 2 - Retrieve and Update Existing Records (Priority: P1)
 
-After data exists in the repository, the application reads JSON records by path, modifies them in memory, and stages updates. Updates are batched alongside creates and deletes and all are released together on commit. The developer can also reset (discard) all staged changes without committing.
+After data exists in the repository, the application reads JSON records by key, modifies them in memory, and stages updates. Updates are batched alongside creates and deletes and all are released together on commit. The developer can also reset (discard) all staged changes without committing.
 
 **Why this priority**: A datastore that can only write once is not useful. Read and update close the loop for typical application data flows (load, mutate, save). Reset is the natural escape hatch when the user abandons an edit session.
 
-**Independent Test**: After Story 1 has populated the repo, the developer can (a) read a record by its path and receive the JSON object, (b) stage an update that changes one field, (c) stage a delete of another record, (d) call reset, (e) confirm the staging area is empty and the repository is unchanged, then (f) re-stage the same operations and commit and see exactly the expected resulting file set.
+**Independent Test**: After Story 1 has populated the repo, the developer can (a) read a record by its key and receive the JSON object, (b) stage an update that changes one field, (c) stage a delete of another record, (d) call reset, (e) confirm the staging area is empty and the repository is unchanged, then (f) re-stage the same operations and commit and see exactly the expected resulting file set.
 
 **Acceptance Scenarios**:
 
-1. **Given** a record exists at a known path, **When** the developer retrieves it, **Then** the returned value equals the JSON content stored at that path on the current branch.
-2. **Given** a non-existent path, **When** the developer attempts to retrieve it, **Then** gh-db reports a "not found" result distinguishable from other errors.
-3. **Given** a record exists and the developer stages an update with new JSON content, **When** commit is called, **Then** the resulting commit replaces the file's content and no other files change.
+1. **Given** a record exists at a known key, **When** the developer retrieves it, **Then** the returned value equals the JSON content stored under that key on the current branch.
+2. **Given** a non-existent key, **When** the developer attempts to retrieve it, **Then** gh-db reports a "not found" result distinguishable from other errors.
+3. **Given** a record exists and the developer stages an update with new JSON content, **When** commit is called, **Then** the resulting commit replaces the record's content and no other records change.
 4. **Given** mixed staged operations (one create, one update, one delete), **When** the developer calls reset, **Then** the staging area becomes empty and the repository is unchanged.
-5. **Given** a staged update to a path, **When** the developer stages a second update to the same path before committing, **Then** the second value supersedes the first and only one change for that path is committed.
+5. **Given** a staged update to a key, **When** the developer stages a second update to the same key before committing, **Then** the second value supersedes the first and only one change for that key is committed.
 
 ---
 
@@ -146,13 +147,17 @@ A developer wants the application to react to external changes to the repository
 #### Staging, Commit, and Reset
 
 - **FR-010**: All create, update, and delete operations MUST accumulate in an in-memory staging area and MUST NOT be visible to other clients of the repository until a commit is performed.
-- **FR-011**: The package MUST expose a way for the caller to inspect the current contents of the staging area, listing each pending operation's path and operation type (create / update / delete).
+- **FR-011**: The package MUST expose a way for the caller to inspect the current contents of the staging area, listing each pending operation's key and operation type (create / update / delete).
 - **FR-012**: The package MUST provide a commit operation that, given a commit message, atomically applies all staged operations as a single commit on the working branch and clears the staging area on success.
 - **FR-013**: If the commit operation fails for any reason, the staging area MUST remain intact and unchanged so the caller can retry or reset.
 - **FR-014**: The package MUST require a non-empty commit message when committing.
 - **FR-015**: The package MUST provide a reset operation that discards all staged changes without contacting GitHub and leaves the repository unchanged.
-- **FR-016**: When the caller stages multiple operations targeting the same path within one staging batch, the package MUST collapse them to a single net effect at commit time (e.g., create+delete cancels; multiple updates keep the last; create+update collapses to a single create of the final value).
-- **FR-017**: Reads (retrieve operations) MUST reflect the staged-but-uncommitted state when staged changes exist for the queried path, so the caller observes a consistent view of their own pending edits. Reads for paths with no staged changes MUST return the latest committed state on the working branch.
+- **FR-016**: When the caller stages multiple operations targeting the same key within one staging batch, the package MUST collapse them to a single net effect at commit time (e.g., create+delete cancels; multiple updates keep the last; create+update collapses to a single create of the final value).
+- **FR-017**: Reads (retrieve operations) MUST reflect the staged-but-uncommitted state when staged changes exist for the queried key, so the caller observes a consistent view of their own pending edits. Reads for keys with no staged changes MUST return the committed state on the working branch as resolved by the configured read-consistency policy (FR-017a).
+- **FR-017a**: The package MUST accept a caller-supplied read-consistency policy at initialization with two values:
+  - **`fresh`** (default): every retrieve operation refetches the working branch's current tip from GitHub before resolving the requested key, so reads reflect any commits made externally since the last operation on this instance.
+  - **`cached`**: the instance retains the most recently observed tip and resolves reads against it; the cached tip is refreshed only on a successful commit, on a successful rollback, or on an explicit refresh call exposed by the package. Under `cached`, reads MUST NOT silently re-fetch.
+- **FR-017b**: The package MUST expose an explicit refresh operation that updates the instance's view of the working branch tip without performing a read, so callers using the `cached` policy can synchronise on demand (for example, after receiving a webhook).
 
 #### Rollback
 
@@ -198,8 +203,8 @@ A developer wants the application to react to external changes to the repository
 
 - **SC-001**: A developer integrating gh-db for the first time can go from installing the package to committing their first JSON record in under 15 minutes, given they already have a GitHub access token.
 - **SC-002**: A batch of up to 50 staged JSON-record changes can be committed in a single operation that either fully succeeds or fully fails — across 100 test runs, no run leaves the repository in a partially-applied state.
-- **SC-003**: After any commit, calling retrieve on each affected path returns the just-committed value in 100% of cases (read-your-writes consistency on the working branch).
-- **SC-004**: After a rollback, calling retrieve on any path modified by the rolled-back commit returns the pre-rollback value in 100% of cases.
+- **SC-003**: After any commit, calling retrieve on each affected key returns the just-committed value in 100% of cases (read-your-writes consistency on the working branch).
+- **SC-004**: After a rollback, calling retrieve on any key modified by the rolled-back commit returns the pre-rollback value in 100% of cases.
 - **SC-005**: When a commit conflicts with an external commit on the same branch, the caller receives a recognisable conflict error and the staging area remains intact (verified across 100% of conflict test cases).
 - **SC-006**: Every distinct failure category from GitHub (authentication, permission, rate limit, not found, conflict, validation) maps to a programmatically distinguishable error in gh-db — verified by an error-coverage matrix across all CRUD, commit, rollback, repo-create, and webhook operations.
 - **SC-007**: A webhook registered via gh-db delivers to its callback URL within 30 seconds of a gh-db commit, for at least 95% of deliveries under nominal GitHub conditions.

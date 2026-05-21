@@ -17,6 +17,8 @@
 - Q: Which GitHub deployments must gh-db support? → A: github.com by default, plus a caller-supplied API base URL to target GitHub Enterprise Server / Enterprise Cloud with a custom domain.
 - Q: How should gh-db handle transient GitHub errors (primary/secondary rate limits, 5xx)? → A: Built-in bounded exponential backoff for transient errors with configurable max-attempts and base-delay; non-transient errors (auth, permission, validation, conflict, not-found) surface immediately and are never retried.
 - Q: How should reads resolve the "latest committed state" when other actors may have advanced the branch tip between operations on this instance? → A: Caller-supplied read-consistency policy on the instance — `fresh` (default; every retrieve refetches the remote tip) or `cached` (use the last-observed tip and only refresh on commit, rollback, or explicit refresh).
+- Note: Retrieve operations return deserialized JSON values (object, array, string, number, boolean, or `null`); callers never handle raw stringified content. gh-db owns serialisation on write and deserialisation on read.
+- Note: The staging area is purely client-side and lives only inside the gh-db instance in the host process. Staged changes are not persisted to GitHub, are not observable by any other gh-db instance or client, and only reach GitHub when a commit succeeds.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -136,17 +138,18 @@ A developer wants the application to react to external changes to the repository
 
 #### CRUD on JSON Records
 
-- **FR-005**: The package MUST allow the caller to create a new JSON record under a specified **key** within the repository, accepting any JSON-serializable value as content. A key is a single flat identifier (no slashes, no path segments) — records are stored at the top level of the repository's working branch, with no nested directories.
+- **FR-005**: The package MUST allow the caller to create a new JSON record under a specified **key** within the repository, accepting any JSON-serializable value (object, array, string, number, boolean, or `null`) as content. The package is responsible for serialising the value to its on-repository form; the caller MUST NOT be required to pre-stringify the value. A key is a single flat identifier (no slashes, no path segments) — records are stored at the top level of the repository's working branch, with no nested directories.
 - **FR-005a**: The package MUST validate keys before any operation enters the staging area: a key MUST be a non-empty string that contains no slash (`/`) or backslash (`\`) characters and no path-traversal segments. Keys that fail validation MUST be rejected with a clear error distinct from "not found" or content-serialization errors.
 - **FR-005b**: The package MUST NOT require the caller to supply a file extension on the key. The on-repository file name used to persist a record is an internal detail of gh-db; callers address records solely by their key.
-- **FR-006**: The package MUST allow the caller to retrieve the JSON content of a record by key, returning the parsed JSON value, and MUST distinguish "not found" from other failure modes.
-- **FR-007**: The package MUST allow the caller to update an existing JSON record by key with new JSON content.
+- **FR-006**: The package MUST allow the caller to retrieve the content of a record by key. The package MUST deserialize the stored content from its on-repository form into a JSON value (object, array, string, number, boolean, or `null`) before returning it; the caller MUST NOT receive raw stringified content. The package MUST distinguish "not found" from other failure modes.
+- **FR-006a**: If the stored content for a key cannot be deserialized as JSON (for example, because the file was edited externally to invalid JSON), the package MUST surface a typed parse error distinct from "not found" and from network/auth errors, without crashing or returning partial data.
+- **FR-007**: The package MUST allow the caller to update an existing JSON record by key with new JSON content, accepting the same value shapes as FR-005 and applying the same serialisation responsibility.
 - **FR-008**: The package MUST allow the caller to delete a record by key.
-- **FR-009**: The package MUST reject create/update operations whose content cannot be serialized as JSON, with a clear error, before that operation enters the staging area.
+- **FR-009**: The package MUST reject create/update operations whose content cannot be serialized as JSON (for example, values containing functions, `undefined` at top level, `BigInt`, or circular references), with a clear error, before that operation enters the staging area.
 
 #### Staging, Commit, and Reset
 
-- **FR-010**: All create, update, and delete operations MUST accumulate in an in-memory staging area and MUST NOT be visible to other clients of the repository until a commit is performed.
+- **FR-010**: All create, update, and delete operations MUST accumulate in an in-memory staging area that lives entirely within the gh-db instance (client-side). Staged changes MUST NOT be persisted to GitHub, MUST NOT be observable by any other gh-db instance or any other client of the repository, and MUST NOT be reflected in the repository's commit history, file contents, branches, or any other server-visible state until a commit succeeds. Only a successful commit transfers staged changes to GitHub.
 - **FR-011**: The package MUST expose a way for the caller to inspect the current contents of the staging area, listing each pending operation's key and operation type (create / update / delete).
 - **FR-012**: The package MUST provide a commit operation that, given a commit message, atomically applies all staged operations as a single commit on the working branch and clears the staging area on success.
 - **FR-013**: If the commit operation fails for any reason, the staging area MUST remain intact and unchanged so the caller can retry or reset.
@@ -192,8 +195,8 @@ A developer wants the application to react to external changes to the repository
 ### Key Entities *(include if feature involves data)*
 
 - **Repository Handle**: The configured target of an instance — identifies the GitHub owner, repository name, and the working branch. The unit on which all CRUD, commit, rollback, and webhook operations are performed.
-- **JSON Record**: A single file stored at the top level of the repository's working branch whose content is a JSON-serializable value. Identified by a flat **key** (a single string with no slashes and no path segments). The atomic unit of read and write.
-- **Staging Area**: An in-memory, per-instance set of pending create/update/delete operations against records, awaiting a commit or a reset. Not visible to other clients of the repository.
+- **JSON Record**: A single file stored at the top level of the repository's working branch whose content is a JSON-serializable value. Identified by a flat **key** (a single string with no slashes and no path segments). Callers always pass and receive deserialized JSON values; serialisation to and from the on-repository form is owned by gh-db. The atomic unit of read and write.
+- **Staging Area**: A purely client-side, in-memory, per-instance set of pending create/update/delete operations against records, awaiting a commit or a reset. Lives only in the host process running the gh-db instance; never persisted to GitHub or visible to any other gh-db instance or client until a commit succeeds.
 - **Commit**: A single durable revision of the repository's state, produced by applying all staged operations together with a message. The unit of rollback.
 - **Webhook Subscription**: A registration on the repository associating a callback URL with one or more event types; identified by an identifier returned by GitHub at registration time.
 

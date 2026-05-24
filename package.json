@@ -1,0 +1,64 @@
+{
+  "name": "gh-db",
+  "version": "0.1.0",
+  "description": "Use a GitHub repository as a persistent JSON datastore.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "github",
+    "database",
+    "json",
+    "storage",
+    "git"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@octokit/request-error": "^6.1.5",
+    "@octokit/rest": "^21.0.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.10.0",
+    "@types/node": "^20.14.0",
+    "eslint": "^9.10.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-jsdoc": "^50.2.0",
+    "nock": "^13.5.5",
+    "prettier": "^3.3.3",
+    "tsup": "^8.2.4",
+    "typescript": "^5.4.0",
+    "typescript-eslint": "^8.4.0",
+    "vitest": "^2.0.5"
+  }
+}

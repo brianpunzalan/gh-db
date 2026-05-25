@@ -1,0 +1,16 @@
+src/
+tests/
+specs/
+.specify/
+.claude/
+.github/
+coverage/
+*.config.ts
+*.config.js
+.prettierrc
+.prettierignore
+.eslintrc*
+eslint.config.js
+tsconfig.json
+vitest.config.ts
+CLAUDE.md

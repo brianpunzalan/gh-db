@@ -263,12 +263,12 @@ the webhook and further commits do not deliver to that URL. (Story 5 acceptance 
 v0.1.0 changelog entry, JSDoc coverage, build verification, and edge-case coverage that cuts
 across all stories.
 
-- [ ] T085 [P] Contract test for GitHub REST shape: recorded-fixture conformance for every endpoint in contracts/github-endpoints.md (repository create, branch ref read, contents read, git blobs/trees/commits/refs, compare, hooks) in `tests/contract/github-rest-shape.test.ts`
+- [x] T085 [P] Contract test for GitHub REST shape: recorded-fixture conformance for every endpoint in contracts/github-endpoints.md (repository create, branch ref read, contents read, git blobs/trees/commits/refs, compare, hooks) in `tests/contract/github-rest-shape.test.ts`
 - [x] T086 [P] Expand `README.md` with full Quickstart content from `specs/001-github-db-crud/quickstart.md` (all five stories), API reference linking to JSDoc, the documented event-type table from contracts/webhook-events.md, error-handling pattern, and GitHub Enterprise notes
-- [ ] T087 [P] Edge-case integration coverage: large single record (~1 MB), 50-record commit batch atomicity (SC-002), rate-limit retry honoring `Retry-After`, token-expiry mid-session → `AuthError` on next call, in `tests/integration/edge-cases.test.ts`
+- [x] T087 [P] Edge-case integration coverage: large single record (~1 MB), 50-record commit batch atomicity (SC-002), rate-limit retry honoring `Retry-After`, token-expiry mid-session → `AuthError` on next call, in `tests/integration/edge-cases.test.ts`
 - [ ] T088 Run quickstart.md end-to-end against a real throwaway GitHub repository (gated on `GH_DB_LIVE_TOKEN` / `GH_DB_LIVE_REPO` env vars; opt-in, not blocking CI) to validate SC-001 (under 15 minutes to first commit) — document the run in `CHANGELOG.md`
 - [x] T089 [P] Update `CHANGELOG.md` `[Unreleased]` → `[0.1.0]` with `Added` entries for every user story (US1–US5), conflict policies, read-consistency policies, retry layer, typed error categories, and GitHub Enterprise support (Constitution V)
-- [ ] T090 Build verification: run `tsup` and inspect `dist/` for `index.js` (CJS), `index.mjs` (ESM), `index.d.ts`, `index.d.mts`; verify `package.json` exports map resolves correctly in both `require('gh-db')` and `import 'gh-db'` smoke tests
+- [x] T090 Build verification: run `tsup` and inspect `dist/` for `index.js` (CJS), `index.mjs` (ESM), `index.d.ts`, `index.d.mts`; verify `package.json` exports map resolves correctly in both `require('gh-db')` and `import 'gh-db'` smoke tests
 
 ---
 

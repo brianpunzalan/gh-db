@@ -18,7 +18,7 @@ export function decodeJson(key: string, content: string): JsonValue {
   try {
     return JSON.parse(content) as JsonValue;
   } catch (err) {
-    const contentSizeBytes = Buffer.byteLength(content, 'utf8');
+    const contentSizeBytes = new TextEncoder().encode(content).byteLength;
     throw new ParseError(`Failed to parse JSON for key '${key}'.`, {
       key,
       contentSizeBytes,

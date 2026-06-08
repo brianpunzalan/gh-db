@@ -84,9 +84,7 @@ export async function retrieveRecord(
       return { found: false };
     }
     // GitHub returns base64-encoded content with embedded newlines.
-    const content = Buffer.from(body.content, body.encoding === 'base64' ? 'base64' : 'utf8').toString(
-      'utf8',
-    );
+    const content = decodeGitHubContent(body.content, body.encoding ?? '');
     const value = decodeJson(key, content);
     return { found: true, value };
   } catch (err) {
@@ -95,6 +93,19 @@ export async function retrieveRecord(
     }
     throw toGhDbError(err);
   }
+}
+
+/**
+ * Decode GitHub's base64-encoded file content without Node's Buffer API.
+ * Uses `atob` + `TextDecoder` (available in browsers and Node 16+).
+ */
+function decodeGitHubContent(content: string, encoding: string): string {
+  if (encoding === 'base64') {
+    const binary = atob(content.replace(/\n/g, ''));
+    const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  }
+  return content;
 }
 
 /**

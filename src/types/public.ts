@@ -143,3 +143,23 @@ export interface WebhookSubscription {
 
 /** Output of {@link GhDb.retrieve}. */
 export type RetrieveResult = { found: true; value: JsonValue } | { found: false };
+
+/**
+ * Callback invoked by {@link GhDb.watch} on each poll that detects a change.
+ *
+ * - On success: `error` is `null` and `result` is the latest {@link RetrieveResult}.
+ * - On error: `error` is the thrown {@link Error} and `result` is `undefined`.
+ */
+export type WatchCallback = (error: Error | null, result: RetrieveResult | undefined) => void;
+
+/** Options for {@link GhDb.watch}. */
+export interface WatchOptions {
+  /** How often to poll GitHub in milliseconds. Default 5000. Minimum 1000. */
+  intervalMs?: number;
+}
+
+/** Handle returned by {@link GhDb.watch} to stop the polling loop. */
+export interface WatchHandle {
+  /** Stop polling and release the interval. Further callbacks will not fire. */
+  unsubscribe(): void;
+}

@@ -14,6 +14,9 @@ export type {
   WebhookSubscription,
   JsonValue,
   RetrieveResult,
+  WatchCallback,
+  WatchOptions,
+  WatchHandle,
 } from './types/public.js';
 
 export {

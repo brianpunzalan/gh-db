@@ -18,6 +18,7 @@ import { StagingArea } from '../staging/staging-area.js';
 import { listWebhooks } from '../webhooks/list.js';
 import { subscribeWebhook } from '../webhooks/subscribe.js';
 import { unsubscribeWebhook } from '../webhooks/unsubscribe.js';
+import { startWatch, type WatchContext } from '../watch/watch.js';
 import type {
   CommitOptions,
   CommitResult,
@@ -29,6 +30,9 @@ import type {
   StagedOperation,
   WebhookSubscription,
   WebhookSubscriptionOptions,
+  WatchCallback,
+  WatchHandle,
+  WatchOptions,
 } from '../types/public.js';
 import { parseInstanceConfig, type InstanceConfig } from './instance-config.js';
 
@@ -222,6 +226,51 @@ export class GhDb {
   }
 
   /**
+   * Poll a key on the working branch and invoke `callback` whenever the
+   * value changes (or on the first read).
+   *
+   * Uses ETag / `If-None-Match` so unchanged polls do not count against
+   * GitHub's primary rate-limit quota — practical for browser-based
+   * turn-based games where clients need near-real-time state updates
+   * without a relay server.
+   *
+   * The handle is returned synchronously. If the working branch has not
+   * been resolved yet it is resolved in the background; the first poll
+   * fires once the branch is known. Calling `handle.unsubscribe()` before
+   * the branch resolves safely cancels the watch before it starts.
+   *
+   * @param key The record key to watch.
+   * @param callback Invoked with the updated {@link RetrieveResult} on
+   *   change, or with an `Error` when a poll fails.
+   * @param options See {@link WatchOptions}.
+   * @returns A {@link WatchHandle} to stop polling.
+   */
+  public watch(key: string, callback: WatchCallback, options?: WatchOptions): WatchHandle {
+    let cancelled = false;
+    let innerHandle: WatchHandle | undefined;
+
+    const handle: WatchHandle = {
+      unsubscribe(): void {
+        cancelled = true;
+        innerHandle?.unsubscribe();
+      },
+    };
+
+    void this.resolveBranch()
+      .then((branch) => {
+        if (cancelled) return;
+        innerHandle = startWatch(this.makeWatchContext(branch), key, callback, options);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          callback(toGhDbError(err) as Error, undefined);
+        }
+      });
+
+    return handle;
+  }
+
+  /**
    * Resolve the working branch, fetching the repo's default branch on
    * first use when none was provided.
    *
@@ -258,6 +307,20 @@ export class GhDb {
       config: this.config,
       staging: this.staging,
       cachedTip: this.cachedTip,
+      branch,
+    };
+  }
+
+  /**
+   * Build the {@link WatchContext} used by `watch`.
+   *
+   * @param branch The resolved working branch.
+   * @returns The context object.
+   */
+  private makeWatchContext(branch: string): WatchContext {
+    return {
+      octokit: this.octokit,
+      config: this.config,
       branch,
     };
   }

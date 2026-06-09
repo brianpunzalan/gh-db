@@ -1,0 +1,96 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+# Prevent concurrent releases — a new push cancels any in-progress run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    name: Release Package
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write # push version-bump commits and tags
+      id-token: write # npm provenance attestation
+
+    steps:
+      # -----------------------------------------------------------------------
+      # Setup
+      # -----------------------------------------------------------------------
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Full history is required so the script can walk commits back to
+          # the last release tag.
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          # Configures ~/.npmrc with NODE_AUTH_TOKEN for publishing.
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure git identity
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+
+      # -----------------------------------------------------------------------
+      # Generate CHANGELOG and changeset from git history
+      # -----------------------------------------------------------------------
+
+      - name: Generate changeset from commit history
+        id: generate
+        run: node scripts/generate-changeset.cjs
+
+      # -----------------------------------------------------------------------
+      # Version, build, publish
+      # (all skipped when there are no releasable commits)
+      # Correctness gates (typecheck / lint / test) run in ci.yml before merge.
+      # -----------------------------------------------------------------------
+
+      - name: Apply version bump
+        if: steps.generate.outputs.has_changes == 'true'
+        run: npm run version
+
+      - name: Stamp CHANGELOG.md with released version
+        if: steps.generate.outputs.has_changes == 'true'
+        run: node scripts/stamp-changelog-version.cjs
+
+      - name: Build package
+        if: steps.generate.outputs.has_changes == 'true'
+        run: npm run build
+
+      - name: Publish to NPM
+        if: steps.generate.outputs.has_changes == 'true'
+        run: npm run release
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
+
+      # -----------------------------------------------------------------------
+      # Commit version bump and push release tags back to main.
+      # The [skip ci] trailer prevents an infinite release loop.
+      # -----------------------------------------------------------------------
+
+      - name: Push version commit and tags
+        if: steps.generate.outputs.has_changes == 'true'
+        run: |
+          git add -A
+          git diff --staged --quiet \
+            || git commit -m "chore: release package [skip ci]"
+          git push
+          git push --follow-tags

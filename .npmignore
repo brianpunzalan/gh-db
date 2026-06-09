@@ -4,6 +4,8 @@ specs/
 .specify/
 .claude/
 .github/
+.changeset/
+scripts/
 coverage/
 *.config.ts
 *.config.js

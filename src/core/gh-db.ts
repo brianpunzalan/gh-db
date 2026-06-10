@@ -80,9 +80,7 @@ export class GhDb {
    * @param options See {@link CreateRepositoryOptions}.
    * @returns A {@link CreateRepositoryResult}.
    */
-  public async createRepository(
-    options: CreateRepositoryOptions,
-  ): Promise<CreateRepositoryResult> {
+  public async createRepository(options: CreateRepositoryOptions): Promise<CreateRepositoryResult> {
     return createRepository(this.octokit, options);
   }
 
@@ -197,9 +195,7 @@ export class GhDb {
    * @param options See {@link WebhookSubscriptionOptions}.
    * @returns A {@link WebhookSubscription}.
    */
-  public async subscribeWebhook(
-    options: WebhookSubscriptionOptions,
-  ): Promise<WebhookSubscription> {
+  public async subscribeWebhook(options: WebhookSubscriptionOptions): Promise<WebhookSubscription> {
     return subscribeWebhook(this.octokit, this.config.owner, this.config.repo, options);
   }
 
@@ -216,6 +212,7 @@ export class GhDb {
    * Remove a webhook from the configured repository by GitHub's hook id.
    *
    * @param id GitHub's hook id.
+   * @returns A promise that resolves once the webhook has been removed.
    */
   public async unsubscribeWebhook(id: number): Promise<void> {
     return unsubscribeWebhook(this.octokit, this.config.owner, this.config.repo, id);

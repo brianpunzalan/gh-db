@@ -2,10 +2,7 @@ import type { Octokit } from '@octokit/rest';
 import { RequestError } from '@octokit/request-error';
 import { toGhDbError } from '../client/http-error.js';
 import { ValidationError } from '../errors/index.js';
-import type {
-  CreateRepositoryOptions,
-  CreateRepositoryResult,
-} from '../types/public.js';
+import type { CreateRepositoryOptions, CreateRepositoryResult } from '../types/public.js';
 
 /**
  * Provision a new GitHub repository under the configured account or
@@ -71,10 +68,10 @@ export async function createRepository(
     }
   } catch (err) {
     if (err instanceof RequestError && err.status === 422 && isAlreadyExistsError(err)) {
-      throw new ValidationError(
-        `Repository '${options.name}' already exists for this owner.`,
-        { subcode: 'already_exists', cause: err },
-      );
+      throw new ValidationError(`Repository '${options.name}' already exists for this owner.`, {
+        subcode: 'already_exists',
+        cause: err,
+      });
     }
     throw toGhDbError(err);
   }
@@ -85,16 +82,12 @@ export async function createRepository(
   // which does not include the initial commit.
   let initialCommitSha = '';
   try {
-    const refResp = await octokit.request(
-      'GET /repos/{owner}/{repo}/git/ref/{ref}',
-      {
-        owner,
-        repo: options.name,
-        ref: `heads/${defaultBranch}`,
-      },
-    );
-    initialCommitSha =
-      (refResp.data as { object?: { sha?: string } }).object?.sha ?? '';
+    const refResp = await octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
+      owner,
+      repo: options.name,
+      ref: `heads/${defaultBranch}`,
+    });
+    initialCommitSha = (refResp.data as { object?: { sha?: string } }).object?.sha ?? '';
   } catch {
     // Non-fatal: the repo was created. Leave the SHA empty rather than
     // failing the caller's repo-creation flow.

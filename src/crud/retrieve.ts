@@ -47,10 +47,7 @@ export interface RetrieveContext {
  * @param key The record key to read.
  * @returns A {@link RetrieveResult}.
  */
-export async function retrieveRecord(
-  ctx: RetrieveContext,
-  key: string,
-): Promise<RetrieveResult> {
+export async function retrieveRecord(ctx: RetrieveContext, key: string): Promise<RetrieveResult> {
   validateKey(key);
   const staged = ctx.staging.get(key);
   if (staged !== undefined) {
@@ -84,9 +81,10 @@ export async function retrieveRecord(
       return { found: false };
     }
     // GitHub returns base64-encoded content with embedded newlines.
-    const content = Buffer.from(body.content, body.encoding === 'base64' ? 'base64' : 'utf8').toString(
-      'utf8',
-    );
+    const content = Buffer.from(
+      body.content,
+      body.encoding === 'base64' ? 'base64' : 'utf8',
+    ).toString('utf8');
     const value = decodeJson(key, content);
     return { found: true, value };
   } catch (err) {
@@ -107,14 +105,11 @@ export async function retrieveRecord(
  */
 export async function refreshTipSha(ctx: RetrieveContext): Promise<string> {
   try {
-    const response = await ctx.octokit.request(
-      'GET /repos/{owner}/{repo}/git/ref/{ref}',
-      {
-        owner: ctx.config.owner,
-        repo: ctx.config.repo,
-        ref: `heads/${ctx.branch}`,
-      },
-    );
+    const response = await ctx.octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
+      owner: ctx.config.owner,
+      repo: ctx.config.repo,
+      ref: `heads/${ctx.branch}`,
+    });
     const sha = (response.data as { object?: { sha?: string } }).object?.sha;
     if (typeof sha !== 'string') {
       throw new Error('GitHub returned no object SHA for the requested ref.');

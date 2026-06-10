@@ -16,11 +16,7 @@ import type { JsonValue } from '../types/public.js';
  * @param key The record's key.
  * @param value The new JSON value.
  */
-export function stageUpdateInArea(
-  area: StagingArea,
-  key: string,
-  value: JsonValue,
-): void {
+export function stageUpdateInArea(area: StagingArea, key: string, value: JsonValue): void {
   validateKey(key);
   encodeJson(key, value);
   const result = collapseOperation(area.get(key), 'update', key, value);

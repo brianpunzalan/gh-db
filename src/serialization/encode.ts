@@ -30,9 +30,7 @@ export function encodeJson(key: string, value: unknown): string {
     // BigInt; we classify both as serialization failures and surface
     // the reason explicitly so callers can decide whether the value is
     // recoverable.
-    const reason: SerializationReason = isCircularError(err)
-      ? 'circular'
-      : 'unsupported_type';
+    const reason: SerializationReason = isCircularError(err) ? 'circular' : 'unsupported_type';
     throw new SerializationError(
       reason === 'circular'
         ? 'Value contains a circular reference.'

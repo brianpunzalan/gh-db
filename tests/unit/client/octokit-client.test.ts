@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { createOctokitClient, DEFAULT_GITHUB_BASE_URL } from '../../../src/client/octokit-client.js';
+import {
+  createOctokitClient,
+  DEFAULT_GITHUB_BASE_URL,
+} from '../../../src/client/octokit-client.js';
 
 describe('createOctokitClient', () => {
   it('creates an Octokit instance with the configured auth and baseUrl', () => {

@@ -4,15 +4,13 @@ import { computeBackoffMs, MAX_BACKOFF_MS } from '../../../src/retry/backoff.js'
 describe('computeBackoffMs', () => {
   it('uses min(base * 2^attempt, 30s) ceiling with full jitter', () => {
     const random = () => 1; // produces max-but-not-inclusive of ceiling
-    expect(
-      computeBackoffMs({ attempt: 0, baseDelayMs: 500, random }),
-    ).toBeGreaterThanOrEqual(0);
-    expect(
-      computeBackoffMs({ attempt: 0, baseDelayMs: 500, random: () => 0.99 }),
-    ).toBeLessThan(500);
-    expect(
-      computeBackoffMs({ attempt: 3, baseDelayMs: 500, random: () => 0.99 }),
-    ).toBeLessThan(500 * 8);
+    expect(computeBackoffMs({ attempt: 0, baseDelayMs: 500, random })).toBeGreaterThanOrEqual(0);
+    expect(computeBackoffMs({ attempt: 0, baseDelayMs: 500, random: () => 0.99 })).toBeLessThan(
+      500,
+    );
+    expect(computeBackoffMs({ attempt: 3, baseDelayMs: 500, random: () => 0.99 })).toBeLessThan(
+      500 * 8,
+    );
   });
 
   it('caps at MAX_BACKOFF_MS (30s)', () => {

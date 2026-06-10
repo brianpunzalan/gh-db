@@ -52,9 +52,7 @@ export interface CommitPipelineResult {
  * @throws {ConflictError} On non-fast-forward ref update.
  * @throws {GhDbError} For any other GitHub-side failure.
  */
-export async function runCommitPipeline(
-  input: CommitPipelineInput,
-): Promise<CommitPipelineResult> {
+export async function runCommitPipeline(input: CommitPipelineInput): Promise<CommitPipelineResult> {
   const blobShas: BlobShaMap = new Map<string, string>();
 
   try {
@@ -65,15 +63,12 @@ export async function runCommitPipeline(
       // managed to slip past the staging-time validation (e.g., via
       // post-staging mutation of the cached value object).
       const content = encodeJson(op.key, op.value);
-      const blobResp = await input.octokit.request(
-        'POST /repos/{owner}/{repo}/git/blobs',
-        {
-          owner: input.owner,
-          repo: input.repo,
-          content,
-          encoding: 'utf-8',
-        },
-      );
+      const blobResp = await input.octokit.request('POST /repos/{owner}/{repo}/git/blobs', {
+        owner: input.owner,
+        repo: input.repo,
+        content,
+        encoding: 'utf-8',
+      });
       const sha = (blobResp.data as { sha?: string }).sha;
       if (typeof sha !== 'string') {
         throw new Error(`GitHub did not return a blob SHA for key '${op.key}'.`);
@@ -98,16 +93,13 @@ export async function runCommitPipeline(
       throw new Error('GitHub did not return a tree SHA.');
     }
 
-    const commitResp = await input.octokit.request(
-      'POST /repos/{owner}/{repo}/git/commits',
-      {
-        owner: input.owner,
-        repo: input.repo,
-        message: input.message,
-        tree: treeSha,
-        parents: [input.baselineSha],
-      },
-    );
+    const commitResp = await input.octokit.request('POST /repos/{owner}/{repo}/git/commits', {
+      owner: input.owner,
+      repo: input.repo,
+      message: input.message,
+      tree: treeSha,
+      parents: [input.baselineSha],
+    });
     const commitSha = (commitResp.data as { sha?: string }).sha;
     if (typeof commitSha !== 'string') {
       throw new Error('GitHub did not return a commit SHA.');
@@ -132,14 +124,11 @@ export async function runCommitPipeline(
         // deciding to retry.
         let remoteSha = '';
         try {
-          const refResp = await input.octokit.request(
-            'GET /repos/{owner}/{repo}/git/ref/{ref}',
-            {
-              owner: input.owner,
-              repo: input.repo,
-              ref: `heads/${input.branch}`,
-            },
-          );
+          const refResp = await input.octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
+            owner: input.owner,
+            repo: input.repo,
+            ref: `heads/${input.branch}`,
+          });
           remoteSha = (refResp.data as { object?: { sha?: string } }).object?.sha ?? '';
         } catch {
           // Ignore — the conflict-policy layer can still observe a

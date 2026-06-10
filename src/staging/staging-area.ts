@@ -104,12 +104,12 @@ export class StagingArea {
     }
   }
 
-  /** Currently-captured baseline tip SHA, if any. */
+  /** @returns The currently-captured baseline tip SHA, if any. */
   public get baselineSha(): string | undefined {
     return this._baselineSha;
   }
 
-  /** Currently-captured baseline tree SHA, if any. */
+  /** @returns The currently-captured baseline tree SHA, if any. */
   public get baselineTreeSha(): string | undefined {
     return this._baselineTreeSha;
   }

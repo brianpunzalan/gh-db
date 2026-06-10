@@ -50,5 +50,23 @@ export default tseslint.config(
       '@typescript-eslint/no-empty-function': 'off',
     },
   },
+  {
+    // Release tooling — CommonJS Node scripts run outside the build.
+    files: ['scripts/**/*.cjs'],
+    languageOptions: {
+      sourceType: 'commonjs',
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        module: 'writable',
+        require: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
   prettierConfig,
 );

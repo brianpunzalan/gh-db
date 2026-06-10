@@ -6,10 +6,7 @@ import { toGhDbError } from '../client/http-error.js';
 import type { InstanceConfig } from '../core/instance-config.js';
 import { StagingArea } from '../staging/staging-area.js';
 import type { CachedTip } from '../crud/retrieve.js';
-import type {
-  CommitOptions,
-  CommitResult,
-} from '../types/public.js';
+import type { CommitOptions, CommitResult } from '../types/public.js';
 import { runCommitPipeline } from './pipeline.js';
 
 /** Inputs for {@link runCommit}. */
@@ -44,10 +41,7 @@ export interface CommitContext {
  * @throws {RetryExhaustedError} when `'retry'` / `'rebase'` exhausts its
  *   attempt budget.
  */
-export async function runCommit(
-  ctx: CommitContext,
-  options: CommitOptions,
-): Promise<CommitResult> {
+export async function runCommit(ctx: CommitContext, options: CommitOptions): Promise<CommitResult> {
   // FR-014: every commit MUST carry a non-empty, non-whitespace message.
   if (typeof options.message !== 'string' || options.message.trim().length === 0) {
     throw new ValidationError('Commit message must be non-empty.', {
@@ -78,7 +72,7 @@ export async function runCommit(
   const message = options.message;
 
   // First attempt — always against the captured baseline.
-  let attempt = 0;
+  const attempt = 0;
   let result;
   try {
     result = await runCommitPipeline({
@@ -121,14 +115,11 @@ export async function runCommit(
  */
 async function captureBaseline(ctx: CommitContext): Promise<void> {
   try {
-    const refResp = await ctx.octokit.request(
-      'GET /repos/{owner}/{repo}/git/ref/{ref}',
-      {
-        owner: ctx.config.owner,
-        repo: ctx.config.repo,
-        ref: `heads/${ctx.branch}`,
-      },
-    );
+    const refResp = await ctx.octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
+      owner: ctx.config.owner,
+      repo: ctx.config.repo,
+      ref: `heads/${ctx.branch}`,
+    });
     const sha = (refResp.data as { object?: { sha?: string } }).object?.sha;
     if (typeof sha !== 'string') {
       throw new Error('GitHub returned no ref SHA.');

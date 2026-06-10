@@ -2,10 +2,7 @@ import type { Octokit } from '@octokit/rest';
 import { RequestError } from '@octokit/request-error';
 import { toGhDbError } from '../client/http-error.js';
 import { ValidationError } from '../errors/index.js';
-import type {
-  WebhookSubscription,
-  WebhookSubscriptionOptions,
-} from '../types/public.js';
+import type { WebhookSubscription, WebhookSubscriptionOptions } from '../types/public.js';
 
 /**
  * Register a webhook on the configured repository.
@@ -61,17 +58,15 @@ export async function subscribeWebhook(
  */
 function validateOptions(options: WebhookSubscriptionOptions): void {
   if (!Array.isArray(options.events) || options.events.length === 0) {
-    throw new ValidationError(
-      `'events' must be a non-empty array of strings.`,
-      { subcode: 'invalid_input' },
-    );
+    throw new ValidationError(`'events' must be a non-empty array of strings.`, {
+      subcode: 'invalid_input',
+    });
   }
   for (const e of options.events) {
     if (typeof e !== 'string' || e.length === 0) {
-      throw new ValidationError(
-        `Every entry of 'events' must be a non-empty string.`,
-        { subcode: 'invalid_input' },
-      );
+      throw new ValidationError(`Every entry of 'events' must be a non-empty string.`, {
+        subcode: 'invalid_input',
+      });
     }
   }
   if (typeof options.callbackUrl !== 'string' || options.callbackUrl.length === 0) {
@@ -99,10 +94,7 @@ function validateOptions(options: WebhookSubscriptionOptions): void {
  * @param fallbackCallbackUrl URL to use when the response omits it (rare).
  * @returns A WebhookSubscription.
  */
-export function toSubscription(
-  data: unknown,
-  fallbackCallbackUrl?: string,
-): WebhookSubscription {
+export function toSubscription(data: unknown, fallbackCallbackUrl?: string): WebhookSubscription {
   const d = data as {
     id?: number;
     active?: boolean;

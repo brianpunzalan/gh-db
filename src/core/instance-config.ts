@@ -1,9 +1,5 @@
 import { GhDbError } from '../errors/index.js';
-import type {
-  ConflictPolicy,
-  GhDbConfig,
-  ReadConsistencyPolicy,
-} from '../types/public.js';
+import type { ConflictPolicy, GhDbConfig, ReadConsistencyPolicy } from '../types/public.js';
 
 /** Default GitHub REST API base URL. */
 const DEFAULT_BASE_URL = 'https://api.github.com';
@@ -87,8 +83,7 @@ export function parseInstanceConfig(config: GhDbConfig): InstanceConfig {
     throw new GhDbError('validation', `Invalid 'repo': ${config.repo}`);
   }
 
-  const branch =
-    config.branch !== undefined ? validateBranch(config.branch) : undefined;
+  const branch = config.branch !== undefined ? validateBranch(config.branch) : undefined;
   const baseUrl = validateBaseUrl(config.baseUrl);
   const conflictPolicy = validateConflictPolicy(config.conflictPolicy);
   const readConsistency = validateReadConsistency(config.readConsistency);
@@ -108,9 +103,7 @@ export function parseInstanceConfig(config: GhDbConfig): InstanceConfig {
     MAX_RETRY_BASE_DELAY_MS,
   );
   const userAgent =
-    config.userAgent && config.userAgent.length > 0
-      ? config.userAgent
-      : `gh-db/${PACKAGE_VERSION}`;
+    config.userAgent && config.userAgent.length > 0 ? config.userAgent : `gh-db/${PACKAGE_VERSION}`;
 
   return Object.freeze({
     owner: config.owner,
@@ -200,9 +193,7 @@ function validateConflictPolicy(policy: ConflictPolicy | undefined): ConflictPol
  * @returns The resolved policy.
  * @throws {GhDbError} when the value is outside the literal union.
  */
-function validateReadConsistency(
-  policy: ReadConsistencyPolicy | undefined,
-): ReadConsistencyPolicy {
+function validateReadConsistency(policy: ReadConsistencyPolicy | undefined): ReadConsistencyPolicy {
   if (policy === undefined) return DEFAULT_READ_CONSISTENCY;
   if (policy !== 'fresh' && policy !== 'cached') {
     throw new GhDbError(

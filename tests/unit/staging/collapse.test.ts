@@ -30,9 +30,9 @@ describe('collapseOperation', () => {
 
   describe('create + ...', () => {
     it('create + create → StagingError', () => {
-      expect(() => collapseOperation(existing('create', { v: 1 }), 'create', 'k', { v: 2 })).toThrow(
-        StagingError,
-      );
+      expect(() =>
+        collapseOperation(existing('create', { v: 1 }), 'create', 'k', { v: 2 }),
+      ).toThrow(StagingError);
     });
     it('create + update → create (with new value)', () => {
       const r = collapseOperation(existing('create', { v: 1 }), 'update', 'k', { v: 2 });
@@ -48,9 +48,9 @@ describe('collapseOperation', () => {
 
   describe('update + ...', () => {
     it('update + create → StagingError', () => {
-      expect(() => collapseOperation(existing('update', { v: 1 }), 'create', 'k', { v: 2 })).toThrow(
-        StagingError,
-      );
+      expect(() =>
+        collapseOperation(existing('update', { v: 1 }), 'create', 'k', { v: 2 }),
+      ).toThrow(StagingError);
     });
     it('update + update → update (latest value)', () => {
       const r = collapseOperation(existing('update', { v: 1 }), 'update', 'k', { v: 2 });

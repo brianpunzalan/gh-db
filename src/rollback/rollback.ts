@@ -42,14 +42,11 @@ export async function runRollback(ctx: RollbackContext): Promise<void> {
   // Get the current tip SHA.
   let currentSha: string;
   try {
-    const refResp = await ctx.octokit.request(
-      'GET /repos/{owner}/{repo}/git/ref/{ref}',
-      {
-        owner: ctx.config.owner,
-        repo: ctx.config.repo,
-        ref: `heads/${ctx.branch}`,
-      },
-    );
+    const refResp = await ctx.octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
+      owner: ctx.config.owner,
+      repo: ctx.config.repo,
+      ref: `heads/${ctx.branch}`,
+    });
     const sha = (refResp.data as { object?: { sha?: string } }).object?.sha;
     if (typeof sha !== 'string') {
       throw new Error('GitHub returned no ref SHA.');
@@ -79,10 +76,9 @@ export async function runRollback(ctx: RollbackContext): Promise<void> {
     throw toGhDbError(err);
   }
   if (parentSha === undefined) {
-    throw new RollbackError(
-      'Rollback refused: current commit has no parent (initial commit).',
-      { reason: 'initial_commit' },
-    );
+    throw new RollbackError('Rollback refused: current commit has no parent (initial commit).', {
+      reason: 'initial_commit',
+    });
   }
 
   // Force-update the ref to the parent. The spec's Assumptions section

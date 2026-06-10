@@ -78,7 +78,7 @@ export async function runCommit(
   const message = options.message;
 
   // First attempt — always against the captured baseline.
-  let attempt = 0;
+  const attempt = 0;
   let result;
   try {
     result = await runCommitPipeline({

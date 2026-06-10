@@ -216,6 +216,7 @@ export class GhDb {
    * Remove a webhook from the configured repository by GitHub's hook id.
    *
    * @param id GitHub's hook id.
+   * @returns A promise that resolves once the webhook has been removed.
    */
   public async unsubscribeWebhook(id: number): Promise<void> {
     return unsubscribeWebhook(this.octokit, this.config.owner, this.config.repo, id);

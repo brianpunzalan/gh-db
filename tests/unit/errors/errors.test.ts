@@ -133,8 +133,6 @@ describe('errors hierarchy', () => {
 
   it('preserves Error name as the subclass class name', () => {
     expect(new AuthError('x').name).toBe('AuthError');
-    expect(new ConflictError('x', { baselineSha: 'b', remoteSha: 'r' }).name).toBe(
-      'ConflictError',
-    );
+    expect(new ConflictError('x', { baselineSha: 'b', remoteSha: 'r' }).name).toBe('ConflictError');
   });
 });

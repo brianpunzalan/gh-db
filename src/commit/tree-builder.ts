@@ -27,10 +27,7 @@ export type BlobShaMap = Map<string, string>;
  * @param blobShas Map from key → blob SHA for create/update entries.
  * @returns The tree entries array (in deterministic key order).
  */
-export function buildTreeEntries(
-  ops: StagedOperation[],
-  blobShas: BlobShaMap,
-): TreeEntry[] {
+export function buildTreeEntries(ops: StagedOperation[], blobShas: BlobShaMap): TreeEntry[] {
   const entries: TreeEntry[] = [];
   // Deterministic ordering keeps test fixtures stable and makes diffs
   // reproducible across runs.

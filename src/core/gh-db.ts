@@ -80,9 +80,7 @@ export class GhDb {
    * @param options See {@link CreateRepositoryOptions}.
    * @returns A {@link CreateRepositoryResult}.
    */
-  public async createRepository(
-    options: CreateRepositoryOptions,
-  ): Promise<CreateRepositoryResult> {
+  public async createRepository(options: CreateRepositoryOptions): Promise<CreateRepositoryResult> {
     return createRepository(this.octokit, options);
   }
 
@@ -197,9 +195,7 @@ export class GhDb {
    * @param options See {@link WebhookSubscriptionOptions}.
    * @returns A {@link WebhookSubscription}.
    */
-  public async subscribeWebhook(
-    options: WebhookSubscriptionOptions,
-  ): Promise<WebhookSubscription> {
+  public async subscribeWebhook(options: WebhookSubscriptionOptions): Promise<WebhookSubscription> {
     return subscribeWebhook(this.octokit, this.config.owner, this.config.repo, options);
   }
 

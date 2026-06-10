@@ -44,15 +44,15 @@ describe('parseInstanceConfig', () => {
   });
 
   it('rejects invalid conflictPolicy', () => {
-    expect(() =>
-      parseInstanceConfig({ ...base, conflictPolicy: 'foo' as never }),
-    ).toThrow(GhDbError);
+    expect(() => parseInstanceConfig({ ...base, conflictPolicy: 'foo' as never })).toThrow(
+      GhDbError,
+    );
   });
 
   it('rejects invalid readConsistency', () => {
-    expect(() =>
-      parseInstanceConfig({ ...base, readConsistency: 'eventual' as never }),
-    ).toThrow(GhDbError);
+    expect(() => parseInstanceConfig({ ...base, readConsistency: 'eventual' as never })).toThrow(
+      GhDbError,
+    );
   });
 
   it('rejects malformed baseUrl', () => {
@@ -60,7 +60,10 @@ describe('parseInstanceConfig', () => {
   });
 
   it('accepts a custom baseUrl', () => {
-    const c = parseInstanceConfig({ ...base, baseUrl: 'https://github.enterprise.example.com/api/v3' });
+    const c = parseInstanceConfig({
+      ...base,
+      baseUrl: 'https://github.enterprise.example.com/api/v3',
+    });
     expect(c.baseUrl).toBe('https://github.enterprise.example.com/api/v3');
   });
 

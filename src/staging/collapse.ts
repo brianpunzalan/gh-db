@@ -3,9 +3,7 @@ import type { JsonValue, StagedOperation, StagedOperationKind } from '../types/p
 import { makeStagedOperation } from './staging-area.js';
 
 /** Result of applying a new operation to an existing staging-area entry. */
-export type CollapseResult =
-  | { kind: 'set'; op: StagedOperation }
-  | { kind: 'remove' };
+export type CollapseResult = { kind: 'set'; op: StagedOperation } | { kind: 'remove' };
 
 /**
  * Compute the net effect of layering a new operation on top of an
@@ -77,14 +75,14 @@ export function collapseOperation(
     return { kind: 'set', op: makeStagedOperation('update', key, incomingValue) };
   }
   if (incomingKind === 'update') {
-    throw new StagingError(
-      `Cannot stageUpdate on key '${key}': record is staged for deletion.`,
-      { key, violation: 'update_on_missing' },
-    );
+    throw new StagingError(`Cannot stageUpdate on key '${key}': record is staged for deletion.`, {
+      key,
+      violation: 'update_on_missing',
+    });
   }
   // incomingKind === 'delete'
-  throw new StagingError(
-    `Cannot stageDelete on key '${key}': delete is already pending.`,
-    { key, violation: 'delete_on_missing' },
-  );
+  throw new StagingError(`Cannot stageDelete on key '${key}': delete is already pending.`, {
+    key,
+    violation: 'delete_on_missing',
+  });
 }

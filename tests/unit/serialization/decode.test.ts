@@ -22,9 +22,7 @@ describe('decodeJson', () => {
     } catch (err) {
       expect(err).toBeInstanceOf(ParseError);
       expect((err as ParseError).key).toBe('alice');
-      expect((err as ParseError).contentSizeBytes).toBe(
-        Buffer.byteLength(malformed, 'utf8'),
-      );
+      expect((err as ParseError).contentSizeBytes).toBe(Buffer.byteLength(malformed, 'utf8'));
     }
   });
 

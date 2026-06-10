@@ -32,10 +32,9 @@ export function validateKey(key: unknown): asserts key is string {
     throw new KeyValidationError(`Key must not be '${key}'.`, { key });
   }
   if (key.includes('/') || key.includes('\\')) {
-    throw new KeyValidationError(
-      'Key must not contain forward-slash or backslash characters.',
-      { key },
-    );
+    throw new KeyValidationError('Key must not contain forward-slash or backslash characters.', {
+      key,
+    });
   }
   if (CONTROL_CHAR_REGEX.test(key)) {
     throw new KeyValidationError('Key must not contain control characters.', { key });

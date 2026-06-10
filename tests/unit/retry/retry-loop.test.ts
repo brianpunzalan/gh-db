@@ -1,10 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { RequestError } from '@octokit/request-error';
-import {
-  AuthError,
-  RetryExhaustedError,
-  ServerError,
-} from '../../../src/errors/index.js';
+import { AuthError, RetryExhaustedError, ServerError } from '../../../src/errors/index.js';
 import { runWithRetry } from '../../../src/retry/retry-loop.js';
 
 function make500(): RequestError {
@@ -96,9 +92,9 @@ describe('runWithRetry', () => {
   });
 
   it('exposes underlying as "network" when no http error was classified', async () => {
-    const fn = vi.fn().mockRejectedValue(
-      Object.assign(new Error('net down'), { code: 'ECONNRESET' }),
-    );
+    const fn = vi
+      .fn()
+      .mockRejectedValue(Object.assign(new Error('net down'), { code: 'ECONNRESET' }));
     await expect(
       runWithRetry(fn, {
         maxAttempts: 2,

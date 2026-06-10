@@ -18,11 +18,7 @@ import type { JsonValue } from '../types/public.js';
  * @param key The new record's key.
  * @param value The record's JSON value.
  */
-export function stageCreateInArea(
-  area: StagingArea,
-  key: string,
-  value: JsonValue,
-): void {
+export function stageCreateInArea(area: StagingArea, key: string, value: JsonValue): void {
   validateKey(key);
   // Validate JSON-encodability eagerly; encodeJson throws
   // SerializationError on circular/unsupported/undefined-top-level.

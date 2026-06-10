@@ -1,8 +1,4 @@
-import {
-  GhDbError,
-  RetryExhaustedError,
-  type RetryExhaustedUnderlying,
-} from '../errors/index.js';
+import { GhDbError, RetryExhaustedError, type RetryExhaustedUnderlying } from '../errors/index.js';
 import { computeBackoffMs, sleep } from './backoff.js';
 import { classifyError } from './classify.js';
 
@@ -49,10 +45,7 @@ function underlyingCategory(code: string): RetryExhaustedUnderlying {
  * @throws {GhDbError} The classified gh-db error on permanent failure.
  * @throws {RetryExhaustedError} When the attempt budget is consumed.
  */
-export async function runWithRetry<T>(
-  fn: () => Promise<T>,
-  options: RetryLoopOptions,
-): Promise<T> {
+export async function runWithRetry<T>(fn: () => Promise<T>, options: RetryLoopOptions): Promise<T> {
   const maxAttempts = Math.max(1, Math.floor(options.maxAttempts));
   const sleepFn = options.sleep ?? sleep;
   let lastError: GhDbError | undefined;
@@ -90,13 +83,10 @@ export async function runWithRetry<T>(
 
   // Budget consumed — surface a terminal error with full provenance so
   // operators can correlate it with rate-limit dashboards.
-  throw new RetryExhaustedError(
-    `Retry budget exhausted after ${maxAttempts} attempts.`,
-    {
-      underlying: lastError ? underlyingCategory(lastError.code) : 'network',
-      attempts: maxAttempts,
-      ...(lastResetAt ? { resetAt: lastResetAt } : {}),
-      cause: lastError,
-    },
-  );
+  throw new RetryExhaustedError(`Retry budget exhausted after ${maxAttempts} attempts.`, {
+    underlying: lastError ? underlyingCategory(lastError.code) : 'network',
+    attempts: maxAttempts,
+    ...(lastResetAt ? { resetAt: lastResetAt } : {}),
+    cause: lastError,
+  });
 }

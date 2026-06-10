@@ -32,14 +32,11 @@ export interface OverlapInput {
 export async function detectOverlap(input: OverlapInput): Promise<string[]> {
   if (input.baselineSha === input.remoteSha) return [];
   try {
-    const response = await input.octokit.request(
-      'GET /repos/{owner}/{repo}/compare/{basehead}',
-      {
-        owner: input.owner,
-        repo: input.repo,
-        basehead: `${input.baselineSha}...${input.remoteSha}`,
-      },
-    );
+    const response = await input.octokit.request('GET /repos/{owner}/{repo}/compare/{basehead}', {
+      owner: input.owner,
+      repo: input.repo,
+      basehead: `${input.baselineSha}...${input.remoteSha}`,
+    });
     const body = response.data as { files?: Array<{ filename?: string }> };
     const files = body.files ?? [];
     const overlapping: string[] = [];

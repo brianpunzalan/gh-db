@@ -45,14 +45,11 @@ export async function replayOnNewTip(input: ReplayInput): Promise<CommitPipeline
   let remoteSha: string;
   let remoteTreeSha: string;
   try {
-    const refResp = await input.octokit.request(
-      'GET /repos/{owner}/{repo}/git/ref/{ref}',
-      {
-        owner: input.owner,
-        repo: input.repo,
-        ref: `heads/${input.branch}`,
-      },
-    );
+    const refResp = await input.octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
+      owner: input.owner,
+      repo: input.repo,
+      ref: `heads/${input.branch}`,
+    });
     const sha = (refResp.data as { object?: { sha?: string } }).object?.sha;
     if (typeof sha !== 'string') {
       throw new Error('GitHub returned no ref SHA on refetch.');

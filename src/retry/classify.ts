@@ -199,7 +199,10 @@ function headerValue(
  * @param resetEpoch The `X-RateLimit-Reset` header value.
  * @returns A wall-clock Date hint or undefined.
  */
-function parseResetHint(retryAfter: string | undefined, resetEpoch: string | undefined): Date | undefined {
+function parseResetHint(
+  retryAfter: string | undefined,
+  resetEpoch: string | undefined,
+): Date | undefined {
   if (retryAfter !== undefined) {
     const seconds = Number(retryAfter);
     if (Number.isFinite(seconds)) {

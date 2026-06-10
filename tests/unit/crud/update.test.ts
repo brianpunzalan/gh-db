@@ -13,17 +13,13 @@ describe('stageUpdate', () => {
   });
 
   it('rejects invalid key', () => {
-    expect(() => stageUpdateInArea(new StagingArea(), '..', { x: 1 })).toThrow(
-      KeyValidationError,
-    );
+    expect(() => stageUpdateInArea(new StagingArea(), '..', { x: 1 })).toThrow(KeyValidationError);
   });
 
   it('rejects non-JSON-serializable value', () => {
     const area = new StagingArea();
     area.set(makeStagedOperation('update', 'alice', { x: 1 }));
-    expect(() => stageUpdateInArea(area, 'alice', undefined as never)).toThrow(
-      SerializationError,
-    );
+    expect(() => stageUpdateInArea(area, 'alice', undefined as never)).toThrow(SerializationError);
   });
 
   it('collapses update+update into latest-value update', () => {
